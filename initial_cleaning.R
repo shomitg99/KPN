@@ -6,3 +6,5 @@ library(caret)
 nba_served <- read.csv("campaigns_served.csv", header = TRUE, stringsAsFactors = TRUE)
 nba_meta <- read.csv("campaign_metadata.csv", sep=";", stringsAsFactors=TRUE)
 customers <- read.csv("customer_features.csv", header = TRUE, stringsAsFactors = TRUE)
+
+# Rename customer feature variables
