@@ -24,16 +24,14 @@ customers$month <- month(customers$date)
 
 nba_served$month <- month(nba_served$decision_date)
 
-# Merging datasets (by 'month' and 'nba_name')
-full <- nba_served
-col_nba_meta <- names(nba_meta)
-full[, col_nba_meta] <- NA
+# Merging datasets
+batch <- nba_served[1:100,]
+batch$location_id <- ifelse(batch$location_id == "", NA, batch$location_id)
 
-pb <- progress_bar$new(total = nrow(full))
+sum(is.na(batch$location_id))
+batch <- na.omit(batch)
 
-for (i in 1:nrow(full)) {
-  pb$tick()
-  full[i, col_nba_meta] <- nba_meta[i,]
-}
+batch$idMonth <- paste(batch$location_id, batch$month,sep = "")
+customers$idMonth <- paste(customers$location_id, customers$month,sep = "")
 
-pb$close()
+full <- merge(batch, customers, by = "idMonth")
