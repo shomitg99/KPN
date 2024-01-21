@@ -2,6 +2,7 @@
 library(ggplot2)
 library(caret)
 library(readxl)
+library(writexl)
 library(lubridate)
 library(data.table)
 library(progress)
@@ -12,13 +13,15 @@ nba_meta <- fread("campaign_metadata.csv")
 customers <- fread("customer_features.csv")
 
 # Rename customer feature variables - needs to be figured out later (check descriptions)
-new_vars <- read_excel("new_vars.xlsx", col_names = FALSE)
-new_vars <- t(new_vars)
-colnames(customers) <- new_vars
+current_var_names <- data.frame(names(customers))
+# write_xlsx(current_var_names, "current_var_names.xlsx") <- one-time. to create list of new variables manually
+new_var_names <- fread("current_var_names.xlsx")
+new_var_names <- read_xlsx("current_var_names.xlsx")[,2]
+colnames(customers) <- new_var_names$new
+customers$date <- as.Date(customers$date)
+save(customers, file ="customers.RData") # !! Use this for other files
 
 # Create 'month' in customer features and campaigns served
-colnames(customers)[colnames(customers) == "datum"] <- "date"
-customers$date <- as.Date(customers$date)
 table(customers$date)
 customers$month <- month(customers$date)
 
