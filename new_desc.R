@@ -1,6 +1,7 @@
 library(ggplot2)
 library(plotly)
 library(lubridate)
+library(caret)
 
 load("KPN.RData")
 
@@ -44,3 +45,20 @@ dHLV_provOT_sum_reward <- aggregate(full, delta_hlv ~ customer_province + week_r
 ggplotly(ggplot(data = dHLV_provOT_sum_reward, aes(x = week_reward, y = delta_hlv, color = customer_province)) +
            geom_line() +
            theme_bw())
+
+# preliminary analysis test
+subTest <- full[, c("delta_hlv", "mob_avgUsage_sub", "customer_helpLine_3months", "customer_age", "customer_income")]
+subTest <- subTest[subTest$mob_avgUsage_sub != -1,]
+subTest$customer_age <- as.factor(subTest$customer_age)
+subTest$customer_income<- as.factor(subTest$customer_income)
+
+trainRows <- createDataPartition(subTest$delta_hlv, p = 0.8, list = FALSE)
+train <- subTest[trainRows,]
+test <- subTest[-trainRows,]
+
+linear <- lm(data = subTest, delta_hlv ~.)
+coef(linear)
+varImp(linear)
+
+preds <- predict(linear, newdata = test)
+plot(preds ~ test$delta_hlv)
