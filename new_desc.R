@@ -4,11 +4,21 @@ library(lubridate)
 library(caret)
 
 load("KPN.RData")
+full <- data.frame(full)
 
+# as.factor
+for (i in 1:length(full)) {
+  if (is.character(full[,i])) {
+    full[,i] <- as.factor(full[,i])
+  }
+}
 
 # Unknown province frequency
 nrow(full[full$customer_province == "-",]) # only 2, drop
 full <- full[full$customer_province != "-",]
+
+# Not business park
+full <- full[full$customer_BizPark != 1,]
 
 # dHLV by province
 dhlv_provSum <- aggregate(full, delta_hlv ~ customer_province, FUN = sum)
@@ -46,19 +56,3 @@ ggplotly(ggplot(data = dHLV_provOT_sum_reward, aes(x = week_reward, y = delta_hl
            geom_line() +
            theme_bw())
 
-# preliminary analysis test
-subTest <- full[, c("delta_hlv", "mob_avgUsage_sub", "customer_helpLine_3months", "customer_age", "customer_income")]
-subTest <- subTest[subTest$mob_avgUsage_sub != -1,]
-subTest$customer_age <- as.factor(subTest$customer_age)
-subTest$customer_income<- as.factor(subTest$customer_income)
-
-trainRows <- createDataPartition(subTest$delta_hlv, p = 0.8, list = FALSE)
-train <- subTest[trainRows,]
-test <- subTest[-trainRows,]
-
-linear <- lm(data = subTest, delta_hlv ~.)
-coef(linear)
-varImp(linear)
-
-preds <- predict(linear, newdata = test)
-plot(preds ~ test$delta_hlv)
