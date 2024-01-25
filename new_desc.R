@@ -2,6 +2,7 @@ library(ggplot2)
 library(plotly)
 library(lubridate)
 library(caret)
+library(writexl)
 
 load("KPN.RData")
 full <- data.frame(full)
@@ -17,8 +18,13 @@ for (i in 1:length(full)) {
 nrow(full[full$customer_province == "-",]) # only 2, drop
 full <- full[full$customer_province != "-",]
 
-# Not business park
+# Not business park or Business Line (ZM)
 full <- full[full$customer_BizPark != 1,]
+full <- full[full$BusinessLine != "CM_ZM",]
+
+# unique NBAs
+NBA_names <- data.frame(levels(full$nba_name.x))
+#write_xlsx(NBA_names, "NBA_unique.xlsx")
 
 # dHLV by province
 dhlv_provSum <- aggregate(full, delta_hlv ~ customer_province, FUN = sum)
