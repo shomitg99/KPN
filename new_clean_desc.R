@@ -22,12 +22,16 @@ full <- full[full$customer_province != "-",]
 full <- full[full$customer_BizPark != 1,]
 full <- full[full$BusinessLine != "CM_ZM",]
 
+save(full, file = "full2.RData")
+
 # validity check reward date
 check <- full[,c("decision_date","nba_name.x", "delta_hlv", "reward_date")]
 
-# unique NBAs
-NBA_names <- data.frame(levels(full$nba_name.x))
-#write_xlsx(NBA_names, "NBA_unique.xlsx")
+# unique NBAs (one-time script)
+# NBA_names <- data.frame(levels(full$nba_name.x))
+# varName <- data.frame(colnames(full))
+# write_xlsx(varName, "variable_names.xlsx")
+# write_xlsx(NBA_names, "NBA_unique.xlsx")
 
 # dHLV by province
 dhlv_provSum <- aggregate(full, delta_hlv ~ customer_province, FUN = sum)
