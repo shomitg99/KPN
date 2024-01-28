@@ -7,6 +7,7 @@ load("full3.RData")
 load("Income_and_Density.RData")
 load("EducationTable2.RData")
 load("AgeTable2.RData")
+load("Market_Size_Proxy.RData")
 
 inc_dens <- data3
 prov_age <- result
@@ -118,3 +119,8 @@ full11$inc_diff <- ifelse(full11$customer_income != full11$mean_income, 1, 0)
 full11$age_diff <- ifelse(full11$age_2545 == 1 & full11$median_age == 1, 0, ifelse(full11$age_4565 == 1 & full11$median_age == 2,0,1))
 
 # market size addition
+colnames(MarketSizeData) <- c("customer_province", "mktSize_proxy")
+full12 <- merge(full11, MarketSizeData, by = "customer_province")
+
+# FINAL DATASET
+save(full12, file = "final.RData")
