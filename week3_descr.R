@@ -168,3 +168,5 @@ ggplot(data = dHLV_provOT_sum_decision, aes(x = week_decision, y = delta_hlv, co
   labs(x = "Week",
        y = "Total Delta HLV",
        fill = "Province")
+# Save data
+save(full2, file = "full3.RData")
