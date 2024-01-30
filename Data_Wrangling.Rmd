@@ -50,7 +50,7 @@ library(lubridate)
 4.  **Merge** campaigns served and customer features by 'idMonth' [a combination of 'customer_id' and 'month'
 
     ```{r}
-    batch <- nba_served # Why batch? I was just testing a smaller sample and didn't wanna rename                     # everything from batch to something else.
+    batch <- nba_served # Why batch? I was just testing a smaller sample and didn't wanna rename everything from batch to something else.
     batch$location_id <- ifelse(batch$location_id == "", NA, batch$location_id)
     sum(is.na(batch$location_id))
     batch <- na.omit(batch)
@@ -96,7 +96,7 @@ library(lubridate)
 8.  Create 'reaction' variable based on 'delta_hlv' value [originally, these were positive, neutral, negative. However, after the feedback session with KPN, we will focus solely on 'Sale' and 'Churn'. According to Anastasia, 'Sale' can be approximated by delta_hlv $\geq$ 1000 and 'Churn' can be classified by delta_hlv $\leq$ 800. The rest can be classed as 'Neutral', however, this group will be excluded for the purposes of this study.
 
     ```{r}
-    full2 <- full # Why? Because I working with many different files. Too late to change it now               # teehee
+    full2 <- full # Why? Because I working with many different files. Too late to change it now teehee
     rm(full)
     full2$reaction <- ifelse(full2$delta_hlv < -800, 1, ifelse(full2$delta_hlv > 1000, 2, NA))
     full2$reaction <- as.factor(full2$reaction)
@@ -112,7 +112,7 @@ library(lubridate)
 -   Load and prep external data (source: CBS)
 
 ```{r}
-load("Income_and_Density.RData")
+load("Income_and_Density.RData") # Merging will occur later
 load("EducationTable2.RData")
 load("AgeTable2.RData")
 load("Market_Size_Proxy.RData")
@@ -162,4 +162,30 @@ na_check <- colMeans(is.na(full4))
 na_check
 # Here we see that 97.4% is in the neutral bracket (NA). I think we can either decide to focus only on sale/churn (this would be much easier, since we will be able to perform logistic regression) - but then our sample drops to ~5700 even before removing missing customer features. So, we might have to go with the more complex option of No effect, Acquisition/Cross-Sell, Churn, and Change Orders (logistic no longer possible)
 full5 <- na.omit(full4)
+```
+
+Looking at these checks, indeed we might have to get rid of some columns before we discard the rows. Another point of discussion (esp. when competition is such a big focus of ours)
+
+```{r}
+dash <- apply(full4, 2, function(x) sum(x == "-"))
+dash_prop <- dash/nrow(full4)
+dash_check <- data.frame(Column = names(full4), Occurences = dash, NAs = dash_prop)
+dash_check <- dash_check[order(-dash_check[,2]),]
+dash_check
+```
+
+```{r}
+blank <- apply(full4, 2, function(x) sum(x == ""))
+blank_prop <- blank/nrow(full4)
+blank_check <- data.frame(Column = names(full4), Occurences = blank, NAs = blank_prop)
+blank_check <- blank_check[order(-blank_check[,2]),]
+blank_check
+```
+
+```{r}
+negOne <- apply(full4, 2, function(x) sum(x == -1))
+negOne_prop <- negOne/nrow(full4)
+negOne_check <- data.frame(Column = names(full4), Occurences = negOne, NAs = negOne_prop)
+negOne_check <- negOne_check[order(-negOne_check[,2]),]
+negOne_check
 ```
