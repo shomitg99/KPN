@@ -97,8 +97,7 @@ library(lubridate)
 
     ```{r}
     full2 <- full # Why? Because I working with many different files. Too late to change it now teehee
-    full2$reaction <- ifelse(full2$delta_hlv < -800, "Churn", full2$delta_hlv)
-    full2$reaction <- ifelse(full2$delta_hlv > 1000, "Sale", NA)
+    full2$reaction <- ifelse(full2$delta_hlv > 1000, "Sale", ifelse(full2$delta_hlv < -800, "Churn", NA))
     full2$reaction <- as.factor(full2$reaction)
 
     # Add week variables
