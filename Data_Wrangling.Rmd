@@ -97,10 +97,9 @@ library(lubridate)
 
     ```{r}
     full2 <- full # Why? Because I working with many different files. Too late to change it now teehee
-    rm(full)
-    full2$reaction <- ifelse(full2$delta_hlv < -800, 1, ifelse(full2$delta_hlv > 1000, 2, NA))
+    full2$reaction <- ifelse(full2$delta_hlv < -800, "Churn", full2$delta_hlv)
+    full2$reaction <- ifelse(full2$delta_hlv > 1000, "Sale", NA)
     full2$reaction <- as.factor(full2$reaction)
-    levels(full2$reaction) <- c("Churn", "Sale", "NA")
 
     # Add week variables
     full2$week_decision <- week(full2$decision_date)
@@ -122,8 +121,7 @@ prov_age <- result
 prov_edu <- result1
 
 full3 <- full2 # Same reason as before
-rm(full2) # Cleaning up a bit
-rm(data3)
+rm(data3) # Cleaning up a bit
 rm(result)
 rm(result1)
 ```
