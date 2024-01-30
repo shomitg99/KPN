@@ -1,0 +1,64 @@
+---
+title: "Data_Wrangling"
+author: "Shomit Ghosh"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This file is a compilation of all the data wrangling steps (start to finish) that I've taken so far. Here are the list of files you will need to replicate the process:
+
+**Loading necessary packages**
+
+```{r, message = FALSE, warning = FALSE}
+library(dplyr)
+library(data.table)
+library(readxl)
+library(lubridate)
+```
+
+**Data Wrangling**
+
+1.  Load raw KPN data (campaigns served, campaign metadata, and customer features)
+
+    ```{r}
+    nba_served <- fread("campaigns_served.csv")
+    nba_meta <- fread("campaign_metadata.csv")
+    customers <- fread("customer_features.csv")
+    ```
+
+```{=html}
+<!-- -->
+```
+2.  Renaming customer feature columns
+
+    ```{r}
+    new_var_names <- read_xlsx("current_var_names.xlsx")[,2]
+    colnames(customers) <- new_var_names$new
+    customers$date <- as.Date(customers$date) # Just for good measure
+    ```
+
+3.  Create a variable 'month' in customer features and campaigns served
+
+    ```{r}
+    table(customers$date)
+    customers$month <- month(customers$date)
+    nba_served$month <- month(nba_served$decision_date)
+    ```
+
+4.  **Merge** campaigns served and customer features by 'idMonth' [a combination of 'customer_id' and 'month'
+
+    ```{r}
+    batch <- nba_served # Why batch? I was just testing a smaller sample and didn't wanna rename                     # everything from batch to something else.
+    batch$location_id <- ifelse(batch$location_id == "", NA, batch$location_id)
+    sum(is.na(batch$location_id))
+    batch <- na.omit(batch)
+
+    batch$idMonth <- paste(batch$location_id, batch$month,sep = "")
+    customers$idMonth <- paste(customers$customer_id, customers$month,sep = "")
+
+    nba_cus <- merge(batch, customers, by = "idMonth")
+    ```
