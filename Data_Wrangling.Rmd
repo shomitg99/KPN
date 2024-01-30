@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 This file is a compilation of all the data wrangling steps (start to finish) that I've taken so far - no descriptives included here (as those will likely have to be redone). Here are the list of files you will need to replicate the process: TBC
-=======
+
 This file is a compilation of all the data wrangling steps (start to finish) that I've taken so far - no descriptives included here (as those will likely have to be redone). Here are the list of files you will need to replicate the process:
 
 **Loading necessary packages**
@@ -160,6 +160,6 @@ full4$VAS_pluspakket <- ifelse(full4$VAS_pluspakket != "-",1,0)
 ```{r}
 na_check <- colMeans(is.na(full4))
 na_check
-# Here we see that 97.4% is in the neutral bracket (NA). I think we can either decide to focus only on sale/churn (this would be much easier, since we will be able to perform logistic regression - but then our sample drops to ~5700 even before removing missing customer features. So, we might have to go with the more complex option of No effect, Acquisition/Cross-Sell, Churn, and Change Orders)
+# Here we see that 97.4% is in the neutral bracket (NA). I think we can either decide to focus only on sale/churn (this would be much easier, since we will be able to perform logistic regression) - but then our sample drops to ~5700 even before removing missing customer features. So, we might have to go with the more complex option of No effect, Acquisition/Cross-Sell, Churn, and Change Orders (logistic no longer possible)
 full5 <- na.omit(full4)
 ```
