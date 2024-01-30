@@ -387,7 +387,7 @@ served</p>
 nba_served$month &lt;- month(nba_served$decision_date)</code></pre></li>
 <li><p><strong>Merge</strong> campaigns served and customer features by
 ‘idMonth’ [a combination of ‘customer_id’ and ‘month’</p>
-<pre class="r"><code>batch &lt;- nba_served # Why batch? I was just testing a smaller sample and didn&#39;t wanna rename                     # everything from batch to something else.
+<pre class="r"><code>batch &lt;- nba_served # Why batch? I was just testing a smaller sample and didn&#39;t wanna rename everything from batch to something else.
 batch$location_id &lt;- ifelse(batch$location_id == &quot;&quot;, NA, batch$location_id)
 sum(is.na(batch$location_id))</code></pre>
 <pre><code>## [1] 384234</code></pre>
@@ -428,11 +428,9 @@ According to Anastasia, ‘Sale’ can be approximated by delta_hlv <span class=
 by delta_hlv <span class="math inline">\(\leq\)</span> 800. The rest can
 be classed as ‘Neutral’, however, this group will be excluded for the
 purposes of this study.</p>
-<pre class="r"><code>full2 &lt;- full # Why? Because I working with many different files. Too late to change it now               # teehee
-rm(full)
-full2$reaction &lt;- ifelse(full2$delta_hlv &lt; -800, 1, ifelse(full2$delta_hlv &gt; 1000, 2, NA))
+<pre class="r"><code>full2 &lt;- full # Why? Because I working with many different files. Too late to change it now teehee
+full2$reaction &lt;- ifelse(full2$delta_hlv &gt; 1000, &quot;Sale&quot;, ifelse(full2$delta_hlv &lt; -800, &quot;Churn&quot;, NA))
 full2$reaction &lt;- as.factor(full2$reaction)
-levels(full2$reaction) &lt;- c(&quot;Churn&quot;, &quot;Sale&quot;, &quot;NA&quot;)
 
 # Add week variables
 full2$week_decision &lt;- week(full2$decision_date)
@@ -444,7 +442,7 @@ up</p></li>
 <ul>
 <li>Load and prep external data (source: CBS)</li>
 </ul>
-<pre class="r"><code>load(&quot;Income_and_Density.RData&quot;)
+<pre class="r"><code>load(&quot;Income_and_Density.RData&quot;) # Merging will occur later
 load(&quot;EducationTable2.RData&quot;)
 load(&quot;AgeTable2.RData&quot;)
 load(&quot;Market_Size_Proxy.RData&quot;)
@@ -454,8 +452,7 @@ prov_age &lt;- result
 prov_edu &lt;- result1
 
 full3 &lt;- full2 # Same reason as before
-rm(full2) # Cleaning up a bit
-rm(data3)
+rm(data3) # Cleaning up a bit
 rm(result)
 rm(result1)</code></pre>
 <ul>
@@ -541,6 +538,174 @@ na_check</code></pre>
 ##                    0.0000000</code></pre>
 <pre class="r"><code># Here we see that 97.4% is in the neutral bracket (NA). I think we can either decide to focus only on sale/churn (this would be much easier, since we will be able to perform logistic regression) - but then our sample drops to ~5700 even before removing missing customer features. So, we might have to go with the more complex option of No effect, Acquisition/Cross-Sell, Churn, and Change Orders (logistic no longer possible)
 full5 &lt;- na.omit(full4)</code></pre>
+<p>Looking at these checks, indeed we might have to get rid of some
+columns before we discard the rows. Another point of discussion
+(esp. when competition is such a big focus of ours)</p>
+<pre class="r"><code>dash &lt;- apply(full4, 2, function(x) sum(x == &quot;-&quot;))
+dash_prop &lt;- dash/nrow(full4)
+dash_check &lt;- data.frame(Column = names(full4), Occurences = dash, NAs = dash_prop)
+dash_check &lt;- dash_check[order(-dash_check[,2]),]
+dash_check</code></pre>
+<pre><code>##                                                    Column Occurences        NAs
+## competitor_status                       competitor_status     184708 0.85036209
+## historic_serviceProvider         historic_serviceProvider     107465 0.49474935
+## BB_customerDuration                   BB_customerDuration      14808 0.06817334
+## customer_urban_pop                     customer_urban_pop       4403 0.02027061
+## customer_householdSize             customer_householdSize       4403 0.02027061
+## customer_age                                 customer_age       4403 0.02027061
+## customer_income                           customer_income       4403 0.02027061
+## customer_education                     customer_education       4403 0.02027061
+## decision_date                               decision_date          0 0.00000000
+## delta_hlv                                       delta_hlv          0 0.00000000
+## reward_date                                   reward_date          0 0.00000000
+## month.x                                           month.x          0 0.00000000
+## customer_notCity                         customer_notCity          0 0.00000000
+## customer_residential                 customer_residential          0 0.00000000
+## customer_highRise                       customer_highRise          0 0.00000000
+## customer_province                       customer_province          0 0.00000000
+## customer_mktFocus                       customer_mktFocus          0 0.00000000
+## customer_presence                       customer_presence          0 0.00000000
+## customer_fiberAvail_duration customer_fiberAvail_duration          0 0.00000000
+## customer_move                               customer_move          0 0.00000000
+## customer_disruption_6months   customer_disruption_6months          0 0.00000000
+## BB_revenueFrom_BB_lastMonth   BB_revenueFrom_BB_lastMonth          0 0.00000000
+## BB_discounts                                 BB_discounts          0 0.00000000
+## BB_hasContract                             BB_hasContract          0 0.00000000
+## BB_downloadSpeed_current         BB_downloadSpeed_current          0 0.00000000
+## BB_downloadSpeed_best               BB_downloadSpeed_best          0 0.00000000
+## VAS_ziggo                                       VAS_ziggo          0 0.00000000
+## VAS_kids                                         VAS_kids          0 0.00000000
+## VAS_viaplay                                   VAS_viaplay          0 0.00000000
+## VAS_espn                                         VAS_espn          0 0.00000000
+## VAS_disney                                     VAS_disney          0 0.00000000
+## VAS_hbo                                           VAS_hbo          0 0.00000000
+## VAS_prime                                       VAS_prime          0 0.00000000
+## VAS_netflix                                   VAS_netflix          0 0.00000000
+## VAS_kpnpay                                     VAS_kpnpay          0 0.00000000
+## VAS_kpnpay_revenue                     VAS_kpnpay_revenue          0 0.00000000
+## VAS_spotify                                   VAS_spotify          0 0.00000000
+## VAS_videoland                               VAS_videoland          0 0.00000000
+## VAS_pluspakket                             VAS_pluspakket          0 0.00000000
+## CampaignName                                 CampaignName          0 0.00000000
+## CampaignType                                 CampaignType          0 0.00000000
+## StrategicGoal                               StrategicGoal          0 0.00000000
+## CampagneDuration                         CampagneDuration          0 0.00000000
+## max_dm_per_day                             max_dm_per_day          0 0.00000000
+## max_em_per_day                             max_em_per_day          0 0.00000000
+## max_tm_per_day                             max_tm_per_day          0 0.00000000
+## SuccessEvaluationTime               SuccessEvaluationTime          0 0.00000000
+## week_decision                               week_decision          0 0.00000000
+## reaction                                         reaction         NA         NA</code></pre>
+<pre class="r"><code>blank &lt;- apply(full4, 2, function(x) sum(x == &quot;&quot;))
+blank_prop &lt;- blank/nrow(full4)
+blank_check &lt;- data.frame(Column = names(full4), Occurences = blank, NAs = blank_prop)
+blank_check &lt;- blank_check[order(-blank_check[,2]),]
+blank_check</code></pre>
+<pre><code>##                                                    Column Occurences       NAs
+## historic_serviceProvider         historic_serviceProvider      42975 0.1978491
+## decision_date                               decision_date          0 0.0000000
+## delta_hlv                                       delta_hlv          0 0.0000000
+## reward_date                                   reward_date          0 0.0000000
+## month.x                                           month.x          0 0.0000000
+## customer_notCity                         customer_notCity          0 0.0000000
+## customer_residential                 customer_residential          0 0.0000000
+## customer_highRise                       customer_highRise          0 0.0000000
+## customer_urban_pop                     customer_urban_pop          0 0.0000000
+## customer_householdSize             customer_householdSize          0 0.0000000
+## customer_age                                 customer_age          0 0.0000000
+## customer_income                           customer_income          0 0.0000000
+## customer_education                     customer_education          0 0.0000000
+## customer_province                       customer_province          0 0.0000000
+## customer_mktFocus                       customer_mktFocus          0 0.0000000
+## competitor_status                       competitor_status          0 0.0000000
+## customer_presence                       customer_presence          0 0.0000000
+## customer_fiberAvail_duration customer_fiberAvail_duration          0 0.0000000
+## customer_move                               customer_move          0 0.0000000
+## customer_disruption_6months   customer_disruption_6months          0 0.0000000
+## BB_revenueFrom_BB_lastMonth   BB_revenueFrom_BB_lastMonth          0 0.0000000
+## BB_discounts                                 BB_discounts          0 0.0000000
+## BB_customerDuration                   BB_customerDuration          0 0.0000000
+## BB_hasContract                             BB_hasContract          0 0.0000000
+## BB_downloadSpeed_current         BB_downloadSpeed_current          0 0.0000000
+## BB_downloadSpeed_best               BB_downloadSpeed_best          0 0.0000000
+## VAS_ziggo                                       VAS_ziggo          0 0.0000000
+## VAS_kids                                         VAS_kids          0 0.0000000
+## VAS_viaplay                                   VAS_viaplay          0 0.0000000
+## VAS_espn                                         VAS_espn          0 0.0000000
+## VAS_disney                                     VAS_disney          0 0.0000000
+## VAS_hbo                                           VAS_hbo          0 0.0000000
+## VAS_prime                                       VAS_prime          0 0.0000000
+## VAS_netflix                                   VAS_netflix          0 0.0000000
+## VAS_kpnpay                                     VAS_kpnpay          0 0.0000000
+## VAS_kpnpay_revenue                     VAS_kpnpay_revenue          0 0.0000000
+## VAS_spotify                                   VAS_spotify          0 0.0000000
+## VAS_videoland                               VAS_videoland          0 0.0000000
+## VAS_pluspakket                             VAS_pluspakket          0 0.0000000
+## CampaignName                                 CampaignName          0 0.0000000
+## CampaignType                                 CampaignType          0 0.0000000
+## StrategicGoal                               StrategicGoal          0 0.0000000
+## CampagneDuration                         CampagneDuration          0 0.0000000
+## max_dm_per_day                             max_dm_per_day          0 0.0000000
+## max_em_per_day                             max_em_per_day          0 0.0000000
+## max_tm_per_day                             max_tm_per_day          0 0.0000000
+## SuccessEvaluationTime               SuccessEvaluationTime          0 0.0000000
+## week_decision                               week_decision          0 0.0000000
+## reaction                                         reaction         NA        NA</code></pre>
+<pre class="r"><code>negOne &lt;- apply(full4, 2, function(x) sum(x == -1))
+negOne_prop &lt;- negOne/nrow(full4)
+negOne_check &lt;- data.frame(Column = names(full4), Occurences = negOne, NAs = negOne_prop)
+negOne_check &lt;- negOne_check[order(-negOne_check[,2]),]
+negOne_check</code></pre>
+<pre><code>##                                                    Column Occurences NAs
+## decision_date                               decision_date          0   0
+## delta_hlv                                       delta_hlv          0   0
+## reward_date                                   reward_date          0   0
+## month.x                                           month.x          0   0
+## historic_serviceProvider         historic_serviceProvider          0   0
+## customer_notCity                         customer_notCity          0   0
+## customer_residential                 customer_residential          0   0
+## customer_highRise                       customer_highRise          0   0
+## customer_urban_pop                     customer_urban_pop          0   0
+## customer_householdSize             customer_householdSize          0   0
+## customer_age                                 customer_age          0   0
+## customer_income                           customer_income          0   0
+## customer_education                     customer_education          0   0
+## customer_province                       customer_province          0   0
+## customer_mktFocus                       customer_mktFocus          0   0
+## competitor_status                       competitor_status          0   0
+## customer_presence                       customer_presence          0   0
+## customer_fiberAvail_duration customer_fiberAvail_duration          0   0
+## customer_move                               customer_move          0   0
+## customer_disruption_6months   customer_disruption_6months          0   0
+## BB_revenueFrom_BB_lastMonth   BB_revenueFrom_BB_lastMonth          0   0
+## BB_discounts                                 BB_discounts          0   0
+## BB_customerDuration                   BB_customerDuration          0   0
+## BB_hasContract                             BB_hasContract          0   0
+## BB_downloadSpeed_current         BB_downloadSpeed_current          0   0
+## BB_downloadSpeed_best               BB_downloadSpeed_best          0   0
+## VAS_ziggo                                       VAS_ziggo          0   0
+## VAS_kids                                         VAS_kids          0   0
+## VAS_viaplay                                   VAS_viaplay          0   0
+## VAS_espn                                         VAS_espn          0   0
+## VAS_disney                                     VAS_disney          0   0
+## VAS_hbo                                           VAS_hbo          0   0
+## VAS_prime                                       VAS_prime          0   0
+## VAS_netflix                                   VAS_netflix          0   0
+## VAS_kpnpay                                     VAS_kpnpay          0   0
+## VAS_kpnpay_revenue                     VAS_kpnpay_revenue          0   0
+## VAS_spotify                                   VAS_spotify          0   0
+## VAS_videoland                               VAS_videoland          0   0
+## VAS_pluspakket                             VAS_pluspakket          0   0
+## CampaignName                                 CampaignName          0   0
+## CampaignType                                 CampaignType          0   0
+## StrategicGoal                               StrategicGoal          0   0
+## CampagneDuration                         CampagneDuration          0   0
+## max_dm_per_day                             max_dm_per_day          0   0
+## max_em_per_day                             max_em_per_day          0   0
+## max_tm_per_day                             max_tm_per_day          0   0
+## SuccessEvaluationTime               SuccessEvaluationTime          0   0
+## week_decision                               week_decision          0   0
+## reaction                                         reaction         NA  NA</code></pre>
 
 
 
