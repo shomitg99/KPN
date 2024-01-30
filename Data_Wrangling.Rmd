@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-This file is a compilation of all the data wrangling steps (start to finish) that I've taken so far. Here are the list of files you will need to replicate the process:
+This file is a compilation of all the data wrangling steps (start to finish) that I've taken so far - no descriptives included here (as those will likely have to be redone). Here are the list of files you will need to replicate the process: TBC
 
 **Loading necessary packages**
 
@@ -30,9 +30,6 @@ library(lubridate)
     customers <- fread("customer_features.csv")
     ```
 
-```{=html}
-<!-- -->
-```
 2.  Renaming customer feature columns
 
     ```{r}
@@ -44,7 +41,6 @@ library(lubridate)
 3.  Create a variable 'month' in customer features and campaigns served
 
     ```{r}
-    table(customers$date)
     customers$month <- month(customers$date)
     nba_served$month <- month(nba_served$decision_date)
     ```
@@ -62,3 +58,106 @@ library(lubridate)
 
     nba_cus <- merge(batch, customers, by = "idMonth")
     ```
+
+5.  **Merge** (campaigns served and customer features) and campaign metadata using 'date_name' [a combination of 'nba_name' and 'decision_date']
+
+    ```{r}
+    nba_meta$extract_date <- format(as.Date(nba_meta$extract_date, format = "%d/%m/%Y"), "%Y-%m-%d")
+    nba_meta$date_name <- paste(nba_meta$extract_date, nba_meta$nba_name, sep = "")
+    nba_cus$date_chr <- as.character(nba_cus$decision_date)
+    nba_cus$date_name <- paste(nba_cus$decision_date, nba_cus$nba_name, sep = "")
+
+    full <- merge(nba_cus, nba_meta, by = "date_name")
+    full <- data.frame(full)
+    ```
+
+6.  Convert string variables to factors
+
+    ```{r}
+    for (i in 1:length(full)) {
+      if (is.character(full[,i])) {
+        full[,i] <- as.factor(full[,i])
+      }
+    }
+    ```
+
+7.  Check frequency for "unknown" province values and remove business line/park observations
+
+    ```{r}
+    nrow(full[full$customer_province == "-",]) # only 2, drop
+    full <- full[full$customer_province != "-",]
+
+    full <- full[full$customer_BizPark != 1,]
+    full <- full[full$BusinessLine != "CM_ZM",]
+    ```
+
+8.  Create 'reaction' variable based on 'delta_hlv' value [originally, these were positive, neutral, negative. However, after the feedback session with KPN, we will focus solely on 'Sale' and 'Churn'. According to Anastasia, 'Sale' can be approximated by delta_hlv $\geq$ 1000 and 'Churn' can be classified by delta_hlv $\leq$ 800. The rest can be classed as 'Neutral', however, this group will be excluded for the purposes of this study.
+
+    ```{r}
+    full2 <- full # Why? Because I working with many different files. Too late to change it now               # teehee
+    rm(full)
+    full2$reaction <- ifelse(full2$delta_hlv < -800, 1, ifelse(full2$delta_hlv > 1000, 2, NA))
+    full2$reaction <- as.factor(full2$reaction)
+    levels(full2$reaction) <- c("Churn", "Sale", "NA")
+
+    # Add week variables
+    full2$week_decision <- week(full2$decision_date)
+    full2$week_reward <- week(full2$reward_date)
+    ```
+
+9.  **Merging** external datasets (that we have so far - relating to provincial education, age, and income) and cleaning up
+
+-   Load and prep external data (source: CBS)
+
+```{r}
+load("Income_and_Density.RData")
+load("EducationTable2.RData")
+load("AgeTable2.RData")
+load("Market_Size_Proxy.RData")
+
+inc_dens <- data3
+prov_age <- result
+prov_edu <- result1
+
+full3 <- full2 # Same reason as before
+rm(full2) # Cleaning up a bit
+rm(data3)
+rm(result)
+rm(result1)
+```
+
+-   Final columns selection (please check from the original column list to see if I've missed anything)
+
+```{r}
+fin_cols <- read_excel("variable_names.xlsx")
+fin_cols <- fin_cols$colnames.full.
+
+full4 <- full3[, fin_cols]
+names(full4$customer_presence) <- "competitor_presence"
+```
+
+-   Recode VAS variables such that if something is present, it is coded as 1 and 0 otherwise (empty)
+
+```{r}
+full4$VAS_ziggo <- ifelse(full4$VAS_ziggo != "-",1,0)
+full4$VAS_kids <- ifelse(full4$VAS_kids != "-",1,0)
+full4$VAS_viaplay <- ifelse(full4$VAS_viaplay != "-",1,0)
+full4$VAS_espn <- ifelse(full4$VAS_espn != "-",1,0)
+full4$VAS_disney <- ifelse(full4$VAS_disney != "-", 1, 0)
+full4$VAS_hbo <- ifelse(full4$VAS_hbo != "-", 1,0)
+full4$VAS_prime <- ifelse(full4$VAS_prime != "-",1,0)
+full4$VAS_netflix <- ifelse(full4$VAS_netflix != "-",1,0)
+full4$VAS_kpnpay <- ifelse(full4$VAS_kpnpay != "-",1,0)
+full4$VAS_spotify <- ifelse(full4$VAS_spotify != "-",1,0)
+full4$VAS_videoland <- ifelse(full4$VAS_videoland != "-",1,0)
+full4$VAS_pluspakket <- ifelse(full4$VAS_pluspakket != "-",1,0)
+```
+
+-   Check for missing values. Here I'm adding new checks instead of removing all missing values
+
+```{r}
+na_check <- colMeans(is.na(full4))
+na_check
+# Here we see that 97.4% is in the neutral bracket (NA). I think we can either decide to focus only on sale/churn (this would be much easier, since we will be able to perform logistic regression - but then our sample drops to ~5700 even before removing missing customer features. So, we might have to go with the more complex option of No effect, Acquisition/Cross-Sell, Churn, and Change Orders)
+full5 <- na.omit(full4)
+```
