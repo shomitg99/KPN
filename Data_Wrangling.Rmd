@@ -9,7 +9,11 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+<<<<<<< HEAD
 This file is a compilation of all the data wrangling steps (start to finish) that I've taken so far - no descriptives included here (as those will likely have to be redone). Here are the list of files you will need to replicate the process: TBC
+=======
+This file is a compilation of all the data wrangling steps (start to finish) that I've taken so far - no descriptives included here (as those will likely have to be redone). Here are the list of files you will need to replicate the process:
+>>>>>>> c9034ee3fb7b3d3d7f4586bd1955ff0ad3d44bae
 
 **Loading necessary packages**
 
