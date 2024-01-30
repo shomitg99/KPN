@@ -122,5 +122,6 @@ full11$age_diff <- ifelse(full11$age_2545 == 1 & full11$median_age == 1, 0, ifel
 colnames(MarketSizeData) <- c("customer_province", "mktSize_proxy")
 full12 <- merge(full11, MarketSizeData, by = "customer_province")
 
+
 # FINAL DATASET
 save(full12, file = "final.RData")

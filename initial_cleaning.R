@@ -13,8 +13,6 @@ nba_meta <- fread("campaign_metadata.csv")
 customers <- fread("customer_features.csv")
 
 # Rename customer feature variables - needs to be figured out later (check descriptions)
-current_var_names <- data.frame(names(customers))
-# write_xlsx(current_var_names, "current_var_names2.xlsx") <- one-time. to create list of new variables manually
 new_var_names <- read_xlsx("current_var_names.xlsx")[,2]
 colnames(customers) <- new_var_names$new
 customers$date <- as.Date(customers$date)
