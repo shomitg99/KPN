@@ -141,7 +141,7 @@ fin_cols <- read_excel("variable_names.xlsx")
 fin_cols <- fin_cols$colnames.full.
 
 full4 <- full3[, fin_cols]
-names(full4$customer_presence) <- "competitor_presence"
+# colnames(full4$customer_presence) <- "competitor_presence"
 ```
 
 -   Recode VAS variables such that if something is present, it is coded as 1 and 0 otherwise (empty)
@@ -166,8 +166,6 @@ full4$VAS_pluspakket <- ifelse(full4$VAS_pluspakket != "-",1,0)
 ```{r}
 na_check <- colMeans(is.na(full4))
 na_check
-# Here we see that 97.4% is in the neutral bracket (NA). I think we can either decide to focus only on sale/churn (this would be much easier, since we will be able to perform logistic regression) - but then our sample drops to ~5700 even before removing missing customer features. So, we might have to go with the more complex option of No effect, Acquisition/Cross-Sell, Churn, and Change Orders (logistic no longer possible)
-full5 <- na.omit(full4)
 ```
 
 Looking at these checks, indeed we might have to get rid of some columns before we discard the rows. Another point of discussion (esp. when competition is such a big focus of ours)
@@ -178,6 +176,15 @@ dash_prop <- dash/nrow(full4)
 dash_check <- data.frame(Column = names(full4), Occurences = dash, NAs = dash_prop)
 dash_check <- dash_check[order(-dash_check[,2]),]
 dash_check
+
+colEx <- c("competitor_status", "competitor")
+
+# Drop competitor_status and competitor (85% missing)
+full4 <- full4[, -which(names(full4) %in% colEx)]
+
+# Drop 2-7% missing
+full4 <- full4[full4$BB_customerDuration != "-",]
+full4 <- full4[full4$customer_urban_pop != "-",]
 ```
 
 ```{r}
@@ -195,3 +202,36 @@ negOne_check <- data.frame(Column = names(full4), Occurences = negOne, NAs = neg
 negOne_check <- negOne_check[order(-negOne_check[,2]),]
 negOne_check
 ```
+
+```{r}
+onb <- apply(full4, 2, function(x) sum(x == "0 - Onbekend"))
+onb_prop <- onb/nrow(full4)
+onb_check <- data.frame(Column = names(full4), Occurences = onb, NAs = onb_prop)
+onb_check <- onb_check[order(-onb_check[,2]),]
+onb_check
+
+# 1.8% 0 - Onbekend
+```
+
+```{r}
+# Recoding historic_serviceProvider
+full4$historic_serviceProvider <- ifelse(full4$historic_serviceProvider == "", "Unknown",ifelse(full4$historic_serviceProvider == "-", "Unknown", full4$historic_serviceProvider))
+```
+
+Missing values dealt with! Now, strategic goals
+
+```{r}
+table(full4$StrategicGoal)
+# Acquisition (Acq-BB, Acq-Mob), Customer Satisfaction (Service - CTR, Move - Service), Churn (Churn-BB, Move-Churn-BB, Retention BB, Retention-Mob), Upsell (Upsell-bundlemob, Upsell-TVVAS), Xsell (Xsell-BB, Xsell-Mob),  ARPU
+full4$StrategicGoal <- as.character(full4$StrategicGoal)
+
+
+full4$strat_new <- ifelse(full4$StrategicGoal == "Acq-BB" | full4$StrategicGoal == "Acq-Mob", "Acquisition", ifelse(full4$StrategicGoal == "Service-CTR" | full4$StrategicGoal == "Move-Service", "Satisfaction",ifelse(full4$StrategicGoal == "Churn-BB" | full4$StrategicGoal == "Move-Churn-BB" | full4$StrategicGoal == "Retention-BB" | full4$StrategicGoal == "Retention-Mob", "Churn",ifelse(full4$StrategicGoal == "Upsell-bundleMob" | full4$StrategicGoal == "Upsell-TVVAS", "Upsell",ifelse(full4$StrategicGoal == "Xsell-BB" | full4$StrategicGoal == "Xsell-Mob", "Xsell", "ARPU")))))
+
+table(full4$strat_new)
+
+full4$strat_new <- as.factor(full4$strat_new)
+table(full4$strat_new, full4$customer_province)
+```
+
+
