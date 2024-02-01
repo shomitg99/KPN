@@ -229,9 +229,24 @@ full4$StrategicGoal <- as.character(full4$StrategicGoal)
 full4$strat_new <- ifelse(full4$StrategicGoal == "Acq-BB" | full4$StrategicGoal == "Acq-Mob", "Acquisition", ifelse(full4$StrategicGoal == "Service-CTR" | full4$StrategicGoal == "Move-Service", "Satisfaction",ifelse(full4$StrategicGoal == "Churn-BB" | full4$StrategicGoal == "Move-Churn-BB" | full4$StrategicGoal == "Retention-BB" | full4$StrategicGoal == "Retention-Mob", "Churn",ifelse(full4$StrategicGoal == "Upsell-bundleMob" | full4$StrategicGoal == "Upsell-TVVAS", "Upsell",ifelse(full4$StrategicGoal == "Xsell-BB" | full4$StrategicGoal == "Xsell-Mob", "Xsell", "ARPU")))))
 
 table(full4$strat_new)
-
 full4$strat_new <- as.factor(full4$strat_new)
-table(full4$strat_new, full4$customer_province)
+
+# Focus on Acquisition, Churn, Xsell, Upsell
+full5 <- subset(full4, subset = strat_new == "Acquisition" | strat_new == "Churn" | strat_new == "Xsell" | strat_new == "Upsell")
+
+table(full5$strat_new)
+
+acq <- subset(full5, subset = strat_new == "Acquisition")
+churn <- subset(full5, subset = strat_new == "Churn")
+xsell <- subset(full5, subset = strat_new == "Xsell")
+upsell <- subset(full5, subset = strat_new == "Upsell")
+
+save(full5, file = "cleaned.RData")
+save(acq, file = "acq.RData")
+save(churn, file = "churn.RData")
+save(xsell, file = "xsell.RData")
+save(upsell, file = "upsell.RData")
 ```
+
 
 
