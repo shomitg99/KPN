@@ -9,9 +9,17 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-This file is a compilation of all the data wrangling steps (start to finish) that I've taken so far - no descriptives included here (as those will likely have to be redone). Here are the list of files you will need to replicate the process: TBC
-
 This file is a compilation of all the data wrangling steps (start to finish) that I've taken so far - no descriptives included here (as those will likely have to be redone). Here are the list of files you will need to replicate the process:
+
+-   campaigns_served.csv
+-   campaign_metadata.csv
+-   customer_features.csv
+-   current_var_names.xlsx
+-   Income_and_Density.RData
+-   EducationTable2.RData
+-   AgeTable2.RData
+-   Market_Size_Proxy.RData
+-   variable_names.xlsx
 
 **Loading necessary packages**
 
@@ -19,6 +27,7 @@ This file is a compilation of all the data wrangling steps (start to finish) tha
 library(dplyr)
 library(data.table)
 library(readxl)
+library(caret)
 library(lubridate)
 ```
 
@@ -97,7 +106,7 @@ library(lubridate)
 
     ```{r}
     full2 <- full # Why? Because I working with many different files. Too late to change it now teehee
-    full2$reaction <- ifelse(full2$delta_hlv > 1000, "Sale", ifelse(full2$delta_hlv < -800, "Churn", NA))
+    full2$reaction <- ifelse(full2$delta_hlv < -800, "Churn", ifelse(full2$delta_hlv == 0, "No Effect", ifelse(full2$delta_hlv > 1000, "Sale", "Change Order")))
     full2$reaction <- as.factor(full2$reaction)
 
     # Add week variables
