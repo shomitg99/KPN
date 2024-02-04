@@ -49,14 +49,28 @@ library(lubridate)
     customers$date <- as.Date(customers$date) # Just for good measure
     ```
 
-3.  Create a variable 'month' in customer features and campaigns served
+3.  Market leaders table
+
+    ```{r}
+    mkt_leaders <- data.frame(table(customers$historic_serviceProvider, customers$customer_province))
+    mkt_leaders <- mkt_leaders[mkt_leaders$Var2 != "-",]
+    colnames(mkt_leaders) <- c("mkt_leader", "customer_province", "Frequency")
+    mkt_leaders <- mkt_leaders[mkt_leaders$mkt_leader != "-",]
+
+    mkt_final <- mkt_leaders %>%
+      group_by(customer_province) %>%
+      slice(which.max(Frequency)) %>%
+      select(customer_province, mkt_leader = mkt_leader)
+    ```
+
+4.  Create a variable 'month' in customer features and campaigns served
 
     ```{r}
     customers$month <- month(customers$date)
     nba_served$month <- month(nba_served$decision_date)
     ```
 
-4.  **Merge** campaigns served and customer features by 'idMonth' [a combination of 'customer_id' and 'month'
+5.  **Merge** campaigns served and customer features by 'idMonth' [a combination of 'customer_id' and 'month'
 
     ```{r}
     batch <- nba_served # Why batch? I was just testing a smaller sample and didn't wanna rename everything from batch to something else.
@@ -70,7 +84,7 @@ library(lubridate)
     nba_cus <- merge(batch, customers, by = "idMonth")
     ```
 
-5.  **Merge** (campaigns served and customer features) and campaign metadata using 'date_name' [a combination of 'nba_name' and 'decision_date']
+6.  **Merge** (campaigns served and customer features) and campaign metadata using 'date_name' [a combination of 'nba_name' and 'decision_date']
 
     ```{r}
     nba_meta$extract_date <- format(as.Date(nba_meta$extract_date, format = "%d/%m/%Y"), "%Y-%m-%d")
@@ -82,7 +96,7 @@ library(lubridate)
     full <- data.frame(full)
     ```
 
-6.  Convert string variables to factors
+7.  Convert string variables to factors
 
     ```{r}
     for (i in 1:length(full)) {
@@ -92,7 +106,7 @@ library(lubridate)
     }
     ```
 
-7.  Check frequency for "unknown" province values and remove business line/park observations
+8.  Check frequency for "unknown" province values and remove business line/park observations
 
     ```{r}
     nrow(full[full$customer_province == "-",]) # only 2, drop
@@ -102,7 +116,7 @@ library(lubridate)
     full <- full[full$BusinessLine != "CM_ZM",]
     ```
 
-8.  Create 'reaction' variable based on 'delta_hlv' value [originally, these were positive, neutral, negative. However, after the feedback session with KPN, we will focus solely on 'Sale' and 'Churn'. According to Anastasia, 'Sale' can be approximated by delta_hlv $\geq$ 1000 and 'Churn' can be classified by delta_hlv $\leq$ 800. The rest can be classed as 'Neutral', however, this group will be excluded for the purposes of this study.
+9.  Create 'reaction' variable based on 'delta_hlv' value [originally, these were positive, neutral, negative. However, after the feedback session with KPN, we will focus solely on 'Sale' and 'Churn'. According to Anastasia, 'Sale' can be approximated by delta_hlv $\geq$ 1000 and 'Churn' can be classified by delta_hlv $\leq$ 800. The rest can be classed as 'Neutral', however, this group will be excluded for the purposes of this study.
 
     ```{r}
     full2 <- full # Why? Because I working with many different files. Too late to change it now teehee
@@ -114,7 +128,7 @@ library(lubridate)
     full2$week_reward <- week(full2$reward_date)
     ```
 
-9.  **Merging** external datasets (that we have so far - relating to provincial education, age, and income) and cleaning up
+10. **Merging** external datasets (that we have so far - relating to provincial education, age, and income) and cleaning up
 
 -   Load and prep external data (source: CBS)
 
@@ -201,6 +215,10 @@ negOne_prop <- negOne/nrow(full4)
 negOne_check <- data.frame(Column = names(full4), Occurences = negOne, NAs = negOne_prop)
 negOne_check <- negOne_check[order(-negOne_check[,2]),]
 negOne_check
+
+# mob_loc_total (convert -1 to 0, and drop 14)
+full4$mob_loc_total <- ifelse(full4$mob_loc_total == -1, 0, full4$mob_loc_total)
+full4 <- full4[full4$mob_loc_total != 14,]
 ```
 
 ```{r}
@@ -210,43 +228,104 @@ onb_check <- data.frame(Column = names(full4), Occurences = onb, NAs = onb_prop)
 onb_check <- onb_check[order(-onb_check[,2]),]
 onb_check
 
-# 1.8% 0 - Onbekend
+# 1.8% 0 - Onbekend (drop)
+full4 <- full4[full4$customer_householdSize != "0 - Onbekend",]
 ```
 
 ```{r}
-# Recoding historic_serviceProvider
-full4$historic_serviceProvider <- ifelse(full4$historic_serviceProvider == "", "Unknown",ifelse(full4$historic_serviceProvider == "-", "Unknown", full4$historic_serviceProvider))
+# Drop historic_serviceProvider (this was used to define market leaders)
+full4 <- full4[, !(names(full4) %in% c("historic_serviceProvider"))]
 ```
 
-Missing values dealt with! Now, strategic goals
+**Merge** external datasets
 
 ```{r}
-table(full4$StrategicGoal)
+# merge - age
+prov_age <- data.frame(
+  "customer_province" = levels(full4$customer_province)
+)
+full4$customer_province <- droplevels(full4$customer_province)
+prov_age$median_age <- c(2,2,2,1,1,2,1,2,1,2,2,2)
+
+
+
+numeric_part <- as.numeric(sub("^\\D*(\\d+).*", "\\1", levels(full4$customer_age)))
+ordLev <- levels(full4$customer_age)[order(numeric_part)]
+full4$customer_age <- factor(full4$customer_age, levels = ordLev)
+full4$age_2545 <- ifelse(as.numeric(full4$customer_age) >= 2 & as.numeric(full4$customer_age) <= 5, 1, 0)
+full4$age_4565 <- ifelse(as.numeric(full4$customer_age) >= 6 & as.numeric(full4$customer_age) <= 9, 1, 0)
+full4_1 <- merge(full4, prov_age, by = "customer_province")
+
+# merge external - income and population density
+colnames(inc_dens) <- c("customer_province", "social_dens","mean_income")
+inc_dens$mean_income <- ifelse(inc_dens$mean_income < 50 & inc_dens$mean_income > 35, "4 - 35.000 - 50.000 euro", inc_dens$mean_income)
+inc_dens$mean_income <- ifelse(inc_dens$mean_income < 70 & inc_dens$mean_income > 50, "5 - 50.000 - 75.000 euro", inc_dens$mean_income)
+
+full5 <- merge(full4_1, inc_dens, by = "customer_province")
+
+# merge external - education (+ adjust main education levels - drop 2,3,1)
+full6 <- full5[full5$customer_education != "1 - Basisonderwijs",]
+full7 <- full6[full6$customer_education != "2 - LBO / VMBO (kader of beroep) / MBO1",]
+full8 <- full7[full7$customer_education != "3 - MAVO / MULO / VMBO (theoretisch of gemengd)",]
+
+colnames(prov_edu) <- c("customer_province", "irrel","median_education","irrel2")
+prov_edu <- prov_edu[,c(1,3)]
+prov_edu$median_education <- as.factor(prov_edu$median_education)
+
+prov_edu2 <- prov_edu %>%
+  mutate(median_education = recode(median_education, "MBO Education" = 4, "VO Education" = 5))
+
+
+full9 <- merge(full8, prov_edu2, by = "customer_province")
+
+# external - diff
+full9$edu_diff <- ifelse(as.numeric(full9$customer_education) != full9$median_education, 1, 0)
+full9$inc_diff <- ifelse(full9$customer_income != full9$mean_income, 1, 0)
+full9$age_diff <- ifelse(full9$age_2545 == 1 & full9$median_age == 1, 0, ifelse(full9$age_4565 == 1 & full9$median_age == 2,0,1))
+
+# market size addition
+colnames(MarketSizeData) <- c("customer_province", "mktSize_proxy")
+full10 <- merge(full9, MarketSizeData, by = "customer_province")
+```
+
+Missing values dealt with! Now, new variables (competition-related) and strategic goals
+
+```{r}
+# convert household to numeric
+full10$customer_householdSize <- as.numeric(full10$customer_householdSize) -2
+full10$potential_mob_comp_pos <- ifelse(full10$customer_householdSize > full10$mob_loc_total, 1, 0)
+full10$potential_mob_comp_neg <- ifelse(full10$customer_householdSize < full10$mob_loc_total, 1, 0)
+```
+
+```{r}
+table(full10$StrategicGoal)
 # Acquisition (Acq-BB, Acq-Mob), Customer Satisfaction (Service - CTR, Move - Service), Churn (Churn-BB, Move-Churn-BB, Retention BB, Retention-Mob), Upsell (Upsell-bundlemob, Upsell-TVVAS), Xsell (Xsell-BB, Xsell-Mob),  ARPU
-full4$StrategicGoal <- as.character(full4$StrategicGoal)
+full10$StrategicGoal <- as.character(full10$StrategicGoal)
 
 
-full4$strat_new <- ifelse(full4$StrategicGoal == "Acq-BB" | full4$StrategicGoal == "Acq-Mob", "Acquisition", ifelse(full4$StrategicGoal == "Service-CTR" | full4$StrategicGoal == "Move-Service", "Satisfaction",ifelse(full4$StrategicGoal == "Churn-BB" | full4$StrategicGoal == "Move-Churn-BB" | full4$StrategicGoal == "Retention-BB" | full4$StrategicGoal == "Retention-Mob", "Churn",ifelse(full4$StrategicGoal == "Upsell-bundleMob" | full4$StrategicGoal == "Upsell-TVVAS", "Upsell",ifelse(full4$StrategicGoal == "Xsell-BB" | full4$StrategicGoal == "Xsell-Mob", "Xsell", "ARPU")))))
+full10$strat_new <- ifelse(full10$StrategicGoal == "Acq-BB" | full10$StrategicGoal == "Acq-Mob", "Acquisition", ifelse(full10$StrategicGoal == "Service-CTR" | full10$StrategicGoal == "Move-Service", "Satisfaction",ifelse(full10$StrategicGoal == "Churn-BB" | full10$StrategicGoal == "Move-Churn-BB" | full10$StrategicGoal == "Retention-BB" | full10$StrategicGoal == "Retention-Mob", "Churn",ifelse(full10$StrategicGoal == "Upsell-bundleMob" | full10$StrategicGoal == "Upsell-TVVAS", "Upsell",ifelse(full10$StrategicGoal == "Xsell-BB" | full10$StrategicGoal == "Xsell-Mob", "Xsell", "ARPU")))))
 
-table(full4$strat_new)
-full4$strat_new <- as.factor(full4$strat_new)
+table(full10$strat_new)
+
+full10$strat_new <- as.factor(full10$strat_new)
 
 # Focus on Acquisition, Churn, Xsell, Upsell
-full5 <- subset(full4, subset = strat_new == "Acquisition" | strat_new == "Churn" | strat_new == "Xsell" | strat_new == "Upsell")
+full11 <- subset(full10, subset = strat_new == "Acquisition" | strat_new == "Churn" | strat_new == "Xsell" | strat_new == "Upsell")
 
-table(full5$strat_new)
+table(full11$strat_new)
 
-acq <- subset(full5, subset = strat_new == "Acquisition")
-churn <- subset(full5, subset = strat_new == "Churn")
-xsell <- subset(full5, subset = strat_new == "Xsell")
-upsell <- subset(full5, subset = strat_new == "Upsell")
+# market leaders
+full12 <- merge(full11, mkt_final, by = "customer_province")
 
-save(full5, file = "cleaned.RData")
+
+acq <- subset(full12, subset = strat_new == "Acquisition")
+churn <- subset(full12, subset = strat_new == "Churn")
+xsell <- subset(full12, subset = strat_new == "Xsell")
+upsell <- subset(full12, subset = strat_new == "Upsell")
+
+save(full12, file = "cleaned.RData")
 save(acq, file = "acq.RData")
 save(churn, file = "churn.RData")
 save(xsell, file = "xsell.RData")
 save(upsell, file = "upsell.RData")
 ```
-
-
-
