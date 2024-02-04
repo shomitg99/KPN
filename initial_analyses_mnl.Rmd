@@ -1,0 +1,243 @@
+---
+title: "Initial Analyses"
+author: "Shomit Ghosh"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Simple Analysis - MNL
+
+In this file, I have included the code for MNL using the main variables (excluding customer heterogneity, so just competition). For each strategic goal, I have one model that runs on unbalanced data and another model that runs on a balanced dataset (using random oversampling)
+
+Load data and packages
+
+```{r}
+load("cleaned.RData")
+load("acq.RData")
+load("churn.RData")
+load("xsell.RData")
+load("upsell.RData")
+```
+
+```{r}
+library(caret)
+library(nnet)
+library(ggplot2)
+library(dplyr)
+library(randomForest)
+library(glmnet)
+library(plotly)
+```
+
+**1 .Acquisition - MNL (unbalanced, main)**
+
+```{r}
+# Final cleaning
+acq_mnl_main_unbal <- acq[, !(names(acq) %in% c("delta_hlv", "BB_downloadSpeed_current", "BB_downloadSpeed_best", "CampaignName", "CampaignType", "StrategicGoal", "decision_date", "reward_date", "strat_new"))]
+
+acq_mnl_main_unbal <- droplevels(acq_mnl_main_unbal)
+acq_mnl_main_unbal$reaction <- relevel(acq_mnl_main_unbal$reaction, ref = "No Effect")
+
+# Split data
+set.seed(100)
+train_rows_acq_main_unbal <- createDataPartition(acq_mnl_main_unbal$reaction, p = 0.8, list = FALSE)
+train_acq_mnl_main_unbal <- acq_mnl_main_unbal[train_rows_acq_main_unbal,]
+test_acq_mnl_main_unbal <- acq_mnl_main_unbal[-train_rows_acq_main_unbal,]
+
+# Model training
+model_acq_mnl_main_unbal <- multinom(data = train_acq_mnl_main_unbal, reaction ~ mktSize_proxy + potential_mob_comp_pos + customer_presence + customer_province + month.x) # for now, interactions excluded - i.e., customer heterogeneity excluded
+model_acq_mnl_main_unbal
+
+# Model test
+preds_acq_mnl_main_unbal <- predict(model_acq_mnl_main_unbal, newdata = test_acq_mnl_main_unbal)
+conf_matrix_acq_mnl_main_unbal <- confusionMatrix(data = preds_acq_mnl_main_unbal, reference = test_acq_mnl_main_unbal$reaction)
+conf_matrix_acq_mnl_main_unbal
+```
+
+**2. Acquisition - MNL (balanced, main)**
+
+```{r}
+# Balance data
+table(acq_mnl_main_unbal$reaction)
+acq_mnl_main_bal <- acq_mnl_main_unbal %>%
+  group_by(reaction) %>%
+  slice_sample(n = max(table(acq_mnl_main_unbal$reaction)), replace = TRUE)
+table(acq_mnl_main_bal$reaction)
+
+# Split data
+set.seed(100)
+train_rows_acq_main_bal <- createDataPartition(acq_mnl_main_bal$reaction, p = 0.8, list = FALSE)
+train_acq_mnl_main_bal <- acq_mnl_main_bal[train_rows_acq_main_bal,]
+test_acq_mnl_main_bal <- acq_mnl_main_bal[-train_rows_acq_main_bal,]
+
+# Model training
+model_acq_mnl_main_bal <- multinom(data = train_acq_mnl_main_bal, reaction ~ mktSize_proxy + potential_mob_comp_pos + customer_presence + customer_province + month.x) # for now, interactions excluded - i.e., customer heterogeneity excluded
+model_acq_mnl_main_bal
+
+# Model test
+preds_acq_mnl_main_bal <- predict(model_acq_mnl_main_bal, newdata = test_acq_mnl_main_bal)
+conf_matrix_acq_mnl_main_bal <- confusionMatrix(data = preds_acq_mnl_main_bal, reference = test_acq_mnl_main_bal$reaction)
+conf_matrix_acq_mnl_main_bal
+```
+
+**3. Churn - MNL (unbalanced, main)**
+
+```{r}
+# Final cleaning
+churn_mnl_main_unbal <- churn[, !(names(churn) %in% c("delta_hlv", "BB_downloadSpeed_current", "BB_downloadSpeed_best", "CampaignName", "CampaignType", "StrategicGoal", "decision_date", "reward_date", "strat_new"))]
+
+churn_mnl_main_unbal <- droplevels(churn_mnl_main_unbal)
+churn_mnl_main_unbal$reaction <- relevel(churn_mnl_main_unbal$reaction, ref = "No Effect")
+
+# Split data
+set.seed(100)
+train_rows_churn_main_unbal <- createDataPartition(churn_mnl_main_unbal$reaction, p = 0.8, list = FALSE)
+train_churn_mnl_main_unbal <- churn_mnl_main_unbal[train_rows_churn_main_unbal,]
+test_churn_mnl_main_unbal <- churn_mnl_main_unbal[-train_rows_churn_main_unbal,]
+
+# Model training
+model_churn_mnl_main_unbal <- multinom(data = train_churn_mnl_main_unbal, reaction ~ mktSize_proxy + potential_mob_comp_pos + customer_presence + customer_province + month.x) # for now, interactions excluded - i.e., customer heterogeneity excluded
+model_churn_mnl_main_unbal
+
+# Model test
+preds_churn_mnl_main_unbal <- predict(model_churn_mnl_main_unbal, newdata = test_churn_mnl_main_unbal)
+conf_matrix_churn_mnl_main_unbal <- confusionMatrix(data = preds_churn_mnl_main_unbal, reference = test_churn_mnl_main_unbal$reaction)
+conf_matrix_churn_mnl_main_unbal
+```
+
+**4. Churn - MNL (balanced, main)**
+
+```{r}
+# Balance data
+table(churn_mnl_main_unbal$reaction)
+churn_mnl_main_bal <- churn_mnl_main_unbal %>%
+  group_by(reaction) %>%
+  slice_sample(n = max(table(churn_mnl_main_unbal$reaction)), replace = TRUE)
+table(churn_mnl_main_bal$reaction)
+
+# Split data
+set.seed(100)
+train_rows_churn_main_bal <- createDataPartition(churn_mnl_main_bal$reaction, p = 0.8, list = FALSE)
+train_churn_mnl_main_bal <- churn_mnl_main_bal[train_rows_churn_main_bal,]
+test_churn_mnl_main_bal <- churn_mnl_main_bal[-train_rows_churn_main_bal,]
+
+# Model training
+model_churn_mnl_main_bal <- multinom(data = train_churn_mnl_main_bal, reaction ~ mktSize_proxy + potential_mob_comp_pos + customer_presence + customer_province + month.x) # for now, interactions excluded - i.e., customer heterogeneity excluded
+model_churn_mnl_main_bal
+
+# Model test
+preds_churn_mnl_main_bal <- predict(model_churn_mnl_main_bal, newdata = test_churn_mnl_main_bal)
+conf_matrix_churn_mnl_main_bal <- confusionMatrix(data = preds_churn_mnl_main_bal, reference = test_churn_mnl_main_bal$reaction)
+conf_matrix_churn_mnl_main_bal
+```
+
+**5. Xsell - MNL (unbalanced, main)**
+
+```{r}
+# Final cleaning
+xsell_mnl_main_unbal <- xsell[, !(names(xsell) %in% c("delta_hlv", "BB_downloadSpeed_current", "BB_downloadSpeed_best", "CampaignName", "CampaignType", "StrategicGoal", "decision_date", "reward_date", "strat_new"))]
+
+xsell_mnl_main_unbal <- droplevels(xsell_mnl_main_unbal)
+xsell_mnl_main_unbal$reaction <- relevel(xsell_mnl_main_unbal$reaction, ref = "No Effect")
+
+# Split data
+set.seed(100)
+train_rows_xsell_main_unbal <- createDataPartition(xsell_mnl_main_unbal$reaction, p = 0.8, list = FALSE)
+train_xsell_mnl_main_unbal <- xsell_mnl_main_unbal[train_rows_xsell_main_unbal,]
+test_xsell_mnl_main_unbal <- xsell_mnl_main_unbal[-train_rows_xsell_main_unbal,]
+
+# Model training
+model_xsell_mnl_main_unbal <- multinom(data = train_churn_mnl_main_unbal, reaction ~ mktSize_proxy + potential_mob_comp_pos + customer_presence + customer_province + month.x) # for now, interactions excluded - i.e., customer heterogeneity excluded
+model_xsell_mnl_main_unbal
+
+# Model test
+preds_xsell_mnl_main_unbal <- predict(model_xsell_mnl_main_unbal, newdata = test_xsell_mnl_main_unbal)
+conf_matrix_xsell_mnl_main_unbal <- confusionMatrix(data = preds_xsell_mnl_main_unbal, reference = test_xsell_mnl_main_unbal$reaction)
+conf_matrix_xsell_mnl_main_unbal
+```
+
+**6. Xsell - MNL (balanced, main)**
+```{r}
+# Balance data
+table(xsell_mnl_main_unbal$reaction)
+xsell_mnl_main_bal <- xsell_mnl_main_unbal %>%
+  group_by(reaction) %>%
+  slice_sample(n = max(table(xsell_mnl_main_unbal$reaction)), replace = TRUE)
+table(xsell_mnl_main_bal$reaction)
+
+xsell_mnl_main_bal <- droplevels(xsell_mnl_main_bal)
+xsell_mnl_main_bal$reaction <- relevel(xsell_mnl_main_bal$reaction, ref = "No Effect")
+
+# Split data
+set.seed(100)
+train_rows_xsell_main_bal <- createDataPartition(xsell_mnl_main_bal$reaction, p = 0.8, list = FALSE)
+train_xsell_mnl_main_bal <- xsell_mnl_main_bal[train_rows_xsell_main_bal,]
+test_xsell_mnl_main_bal <- xsell_mnl_main_bal[-train_rows_xsell_main_bal,]
+
+# Model training
+model_xsell_mnl_main_bal <- multinom(data = train_xsell_mnl_main_bal, reaction ~ mktSize_proxy + potential_mob_comp_pos + customer_presence + customer_province + month.x) # for now, interactions excluded - i.e., customer heterogeneity excluded
+model_xsell_mnl_main_bal
+
+# Model test
+preds_xsell_mnl_main_bal <- predict(model_xsell_mnl_main_bal, newdata = test_xsell_mnl_main_bal)
+conf_matrix_xsell_mnl_main_bal <- confusionMatrix(data = preds_xsell_mnl_main_bal, reference = test_xsell_mnl_main_bal$reaction)
+conf_matrix_xsell_mnl_main_bal
+```
+
+**7. Upsell - MNL (unbalanced, main)**
+
+```{r}
+# Final cleaning
+upsell_mnl_main_unbal <- upsell[, !(names(upsell) %in% c("delta_hlv", "BB_downloadSpeed_current", "BB_downloadSpeed_best", "CampaignName", "CampaignType", "StrategicGoal", "decision_date", "reward_date", "strat_new"))]
+
+upsell_mnl_main_unbal <- droplevels(upsell_mnl_main_unbal)
+upsell_mnl_main_unbal$reaction <- relevel(upsell_mnl_main_unbal$reaction, ref = "No Effect")
+
+# Split data
+set.seed(100)
+train_rows_upsell_main_unbal <- createDataPartition(upsell_mnl_main_unbal$reaction, p = 0.8, list = FALSE)
+train_upsell_mnl_main_unbal <- upsell_mnl_main_unbal[train_rows_upsell_main_unbal,]
+test_upsell_mnl_main_unbal <- upsell_mnl_main_unbal[-train_rows_upsell_main_unbal,]
+
+# Model training
+model_upsell_mnl_main_unbal <- multinom(data = train_upsell_mnl_main_unbal, reaction ~ mktSize_proxy + potential_mob_comp_pos + customer_presence + customer_province + month.x) # for now, interactions excluded - i.e., customer heterogeneity excluded
+model_upsell_mnl_main_unbal
+
+# Model test
+preds_upsell_mnl_main_unbal <- predict(model_upsell_mnl_main_unbal, newdata = test_upsell_mnl_main_unbal)
+conf_matrix_upsell_mnl_main_unbal <- confusionMatrix(data = preds_upsell_mnl_main_unbal, reference = test_upsell_mnl_main_unbal$reaction)
+conf_matrix_upsell_mnl_main_unbal
+```
+
+**8. Upsell - MNL (balanced, main)**
+
+```{r}
+# Balance data
+table(upsell_mnl_main_unbal$reaction)
+upsell_mnl_main_bal <- upsell_mnl_main_unbal %>%
+  group_by(reaction) %>%
+  slice_sample(n = max(table(upsell_mnl_main_unbal$reaction)), replace = TRUE)
+table(upsell_mnl_main_bal$reaction)
+
+upsell_mnl_main_bal <- droplevels(upsell_mnl_main_bal)
+upsell_mnl_main_bal$reaction <- relevel(upsell_mnl_main_bal$reaction, ref = "No Effect")
+
+# Split data
+set.seed(100)
+train_rows_upsell_main_bal <- createDataPartition(upsell_mnl_main_bal$reaction, p = 0.8, list = FALSE)
+train_upsell_mnl_main_bal <- upsell_mnl_main_bal[train_rows_upsell_main_bal,]
+test_upsell_mnl_main_bal <- upsell_mnl_main_bal[-train_rows_upsell_main_bal,]
+
+# Model training
+model_upsell_mnl_main_bal <- multinom(data = train_upsell_mnl_main_bal, reaction ~ mktSize_proxy + potential_mob_comp_pos + customer_presence + customer_province + month.x) # for now, interactions excluded - i.e., customer heterogeneity excluded
+model_upsell_mnl_main_bal
+
+# Model test
+preds_upsell_mnl_main_bal <- predict(model_upsell_mnl_main_bal, newdata = test_upsell_mnl_main_bal)
+conf_matrix_upsell_mnl_main_bal <- confusionMatrix(data = preds_upsell_mnl_main_bal, reference = test_upsell_mnl_main_bal$reaction)
+conf_matrix_upsell_mnl_main_bal
+```
