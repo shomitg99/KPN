@@ -1,0 +1,130 @@
+---
+title: "Descriptive_Initial_Analysis"
+author: "Shomit Ghosh"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+**Load packages**
+
+```{r, warning=FALSE, message=FALSE}
+library(ggplot2)
+library(caret)
+library(dplyr)
+library(plotly)
+```
+
+**Load data**
+
+```{r}
+load('cleaned.RData')
+load('acq.RData')
+load('churn.RData')
+load('upsell.RData')
+load('xsell.RData')
+```
+
+**Descriptives (dHLV)**
+
+```{r}
+hlv_prov <- aggregate(full12, delta_hlv ~ customer_province, FUN = mean)
+mkt_prov <- aggregate(full12, mktSize_proxy ~ customer_province, FUN = mean)
+
+hlv_prov <- data.frame(hlv_prov)
+mkt_prov <- data.frame(mkt_prov)
+
+hlv_mkt_prov <- merge(mkt_prov, hlv_prov, by = "customer_province")
+
+ggplot(data = hlv_mkt_prov, aes(x = mktSize_proxy, y = delta_hlv, color = customer_province)) +
+  geom_point() +
+  labs(x = "Market Size",
+       y = "dHLV",
+       color = "Province"
+  )+
+  theme_bw()
+```
+
+**Descriptives (dHLV v strategic goal)**
+
+```{r}
+dhlv_strat_prov <- aggregate(full12, delta_hlv ~ strat_new + customer_province, FUN = mean)
+ggplot(data = dhlv_strat_prov, aes(x = customer_province, y = delta_hlv, fill = strat_new)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  coord_flip() +
+  labs(y = "Mean dHLV",
+       x = "Province",
+       fill = "Strategic goal") +
+  theme_bw()
+```
+
+**Descriptives (dHLV distr per strategic goal -- tldr; no diff in distribution by strategic goal)**
+
+```{r}
+# Acquisition
+acq_dhlv <- full11[full11$strat_new == "Acquisition", c("delta_hlv", "strat_new", "customer_province")]
+
+ggplot(data = acq_dhlv, aes(x = delta_hlv)) +
+  geom_histogram() +
+  theme_bw()
+
+# Churn
+churn_dhlv <- full11[full11$strat_new == "Churn", c("delta_hlv", "strat_new", "customer_province")]
+
+ggplot(data = churn_dhlv, aes(x = delta_hlv)) +
+  geom_histogram() +
+  theme_bw()
+
+# Xsell
+xsell_dhlv <- full11[full11$strat_new == "Xsell", c("delta_hlv", "strat_new", "customer_province")]
+
+ggplot(data = xsell_dhlv, aes(x = delta_hlv)) +
+  geom_histogram() +
+  theme_bw()
+
+# Upsell
+upsell_dhlv <- full11[full11$strat_new == "Upsell", c("delta_hlv", "strat_new", "customer_province")]
+
+ggplot(data = upsell_dhlv, aes(x = delta_hlv)) +
+  geom_histogram() +
+  theme_bw()
+
+# MEANS
+mean(acq_dhlv$delta_hlv)
+mean(churn_dhlv$delta_hlv)
+mean(xsell_dhlv$delta_hlv)
+mean(upsell_dhlv$delta_hlv)
+```
+
+**Descriptives (Reaction per strategic goal)**
+
+```{r}
+reac_strat <- data.frame(table(full12$reaction, full12$strat_new))
+reac_strat <- reac_strat[reac_strat$Var2 != "ARPU",]
+reac_strat <- reac_strat[reac_strat$Var2 != "Satisfaction",]
+colnames(reac_strat) <- c("reaction", "strategic_goal","frequency")
+
+reac_prop <- reac_strat %>%
+  group_by(strategic_goal) %>%
+  mutate(proportion = frequency / sum(frequency)) %>%
+  select(strategic_goal, reaction, proportion) %>%
+  distinct()
+
+
+
+ggplot(data = reac_prop, aes(x = strategic_goal, y = proportion, fill = reaction)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(x = "Strategic Goal",
+       y = "Proportion",
+       fill = "Reaction") +
+  theme_bw()
+```
+
+**Descriptives (potential_mob_comp)**
+
+```{r}
+pot_mob_pos <- aggregate(full12, potential_mob_comp_pos ~ customer_province, FUN = mean)
+```
